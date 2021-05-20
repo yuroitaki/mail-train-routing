@@ -33,6 +33,9 @@ def validate_input(stations, routes, deliveries, trains):
         for i in range(len(routes)):
             route_name, left_station, right_station, time_cost = routes[i]
 
+            if left_station == right_station:
+                raise ValueError('INVALID_ROUTE_CONNECTING_A_STATION_TO_ITSELF')
+
             if route_name in route_names:
                 raise ValueError('DUPLICATED_ROUTE_NAME')
             route_names.append(route_name)
@@ -109,7 +112,7 @@ def construct_train_network(stations, routes):
 def construct_packages(deliveries, station_map):
     package_collections = list()
     station_inventory = dict()
-    for delivery in deliveries:
+    for index, delivery in enumerate(deliveries):
         name, origin, destination, weight = delivery
         package_collections.append(
             Package(
@@ -119,7 +122,12 @@ def construct_packages(deliveries, station_map):
                 weight
             )
         )
-        station_inventory[station_map[origin]] = {name: None}
+        inventory = station_inventory.get(station_map[origin], None)
+        if inventory is None:
+            station_inventory[station_map[origin]] = {name: index}
+        else:
+            station_inventory[station_map[origin]][name] = index
+
     return package_collections, station_inventory
 
 
@@ -198,6 +206,8 @@ def compute_delivery_shortest_paths(
     train_network
 ):
     for package in package_collections:
+        if package.status() == STATUS['delivered']:
+            continue
         compute_shortest_path(
             package.origin(),
             package.destination(),
@@ -249,6 +259,52 @@ def combine_paths(left_path, right_path):
     return combined_path
 
 
+def pop_station_inventory(package, station_inventory):
+    inventory = station_inventory.get(package.origin(), None)
+    if inventory is None:
+        raise ValueError('MISSING_INVENTORY_AT_ORIGIN')
+    if package.name() not in inventory:
+        raise ValueError('MISSING_PACKAGE_AT_ORIGIN_INVENTORY')
+    station_inventory[package.origin()].pop(package.name())
+
+
+def load_package(package, train, destination, station_inventory):
+    loading_result = train.load_package(package, destination)
+    if not loading_result:
+        return False
+    package.load()
+    pop_station_inventory(package, station_inventory)
+
+    return True
+
+
+def push_station_inventory(package, package_index, station, station_inventory):
+    packages = station_inventory.get(station, None)
+    if packages is None:
+        station_inventory[station] = {package.name(): package_index}
+    else:
+        station_inventory[station][package.name()] = package_index
+
+
+def drop_package(train, station, station_inventory, package_collections):
+    packages_to_drop = train.packages_to_drop()
+    if packages_to_drop is None or len(packages_to_drop) == 0:
+        return False
+    for package_name in packages_to_drop:
+        package_index = packages_to_drop[package_name]
+        package = package_collections[package_index]
+
+        train.drop_package(package)
+        package.drop(station)
+        push_station_inventory(
+            package,
+            package_index,
+            station,
+            station_inventory
+        )
+    return list(packages_to_drop.keys())
+
+
 def route_package_train(stations, routes, deliveries, trains):
     validate_input(stations, routes, deliveries, trains)
 
@@ -282,9 +338,30 @@ def route_package_train(stations, routes, deliveries, trains):
             shortest_paths,
             train_network
         )
+        load_package(package, train, package.destination(), station_inventory)
+
         _, delivery_path = get_shortest_path_info(
             package.origin(),
             package.destination(),
             shortest_paths
         )
         journey_path = combine_paths(pickup_path, delivery_path)
+        journey_length = len(journey_path)
+        for position in range(journey_length):
+            loaded_packages = list()
+            dropped_packages = list()
+
+            dropped_inventory = drop_package(
+                train,
+                journey_path[position],
+                station_inventory,
+                package_collections
+            )
+
+            if dropped_inventory:
+                dropped_packages.extend(dropped_inventory)
+
+            # if position < journey_path - 2:
+            #     train.move(
+            #         journey_path[position + 1],
+            #     )

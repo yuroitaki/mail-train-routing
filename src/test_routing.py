@@ -19,6 +19,23 @@ def test_simplest_scenario():
     route_package_train(stations, routes, deliveries, trains)
 
 
+def test_inventory():
+    stations = ['A', 'B', 'C']
+    routes = [
+        ('E1', 'A', 'B', 3),
+        ('E2', 'B', 'C', 1)
+    ]
+    deliveries = [
+        ('P1', 'A', 'C', 5),
+        ('P2', 'A', 'B', 3)
+    ]
+    trains = [
+        ('Q1', 'B', 6),
+        ('Q2', 'C', 5)
+    ]
+    route_package_train(stations, routes, deliveries, trains)
+
+
 def test_invalid_input_dictionary():
     stations = []
     routes = {}
@@ -47,6 +64,22 @@ def test_invalid_station():
     ]
     trains = [
         ('Q1', 'B', 6)
+    ]
+    with pytest.raises(ValueError):
+        route_package_train(stations, routes, deliveries, trains)
+
+
+def test_invalid_route():
+    stations = ['A', 'F']
+    routes = [
+        ('E2', 'A', 'F', 3),
+        ('E1', 'A', 'A', 3)
+    ]
+    deliveries = [
+        ('P1', 'A', 'F', 5),
+    ]
+    trains = [
+        ('Q1', 'A', 6)
     ]
     with pytest.raises(ValueError):
         route_package_train(stations, routes, deliveries, trains)
@@ -181,6 +214,7 @@ def test_invalid_pickup_weight():
 
 
 if __name__ == '__main__':
-    test_simplest_scenario()
+    # test_simplest_scenario()
+    test_inventory()
     # test_invalid_pickup_path()
     # test_invalid_pickup_weight()

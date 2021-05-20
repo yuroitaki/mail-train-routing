@@ -13,7 +13,10 @@ class Package:
         self._destination = destination
         self._weight = weight
 
-        self._status = STATUS['pending']
+        if origin == destination:
+            self._status = STATUS['delivered']
+        else:
+            self._status = STATUS['pending']
 
     def name(self):
         return self._name
