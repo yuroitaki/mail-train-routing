@@ -5,7 +5,7 @@ class Train:
         self._station = station
         self._max_capacity = max_capacity
 
-        self._capacity = self.max_capacity
+        self._capacity = self._max_capacity
         self._packages = dict()
 
         self._elapsed_time = 0
@@ -49,7 +49,7 @@ class Train:
             'station': station_name,
             'loaded_packages': loaded_packages,
             'dropped_packages': dropped_packages,
-            'next_station': next_station_name
+            'next_station': next_station_name,
             'next_route': route_name,
             'next_journey_duration': journey_duration
         })
