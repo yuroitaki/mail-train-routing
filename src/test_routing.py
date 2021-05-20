@@ -2,59 +2,6 @@ import pytest
 from src.routing import route_package_train
 
 
-def test_simplest_scenario():
-    stations = ['A', 'B', 'C']
-    routes = [
-        ('E1', 'A', 'B', 3),
-        ('E2', 'B', 'C', 1)
-    ]
-    deliveries = [
-        ('P1', 'A', 'C', 5),
-        ('P2', 'B', 'C', 3)
-    ]
-    trains = [
-        ('Q1', 'B', 6),
-        ('Q2', 'C', 5)
-    ]
-    route_package_train(stations, routes, deliveries, trains)
-
-
-def test_inventory():
-    stations = ['A', 'B', 'C']
-    routes = [
-        ('E1', 'A', 'B', 3),
-        ('E2', 'B', 'C', 1)
-    ]
-    deliveries = [
-        ('P1', 'A', 'C', 5),
-        ('P2', 'A', 'B', 3)
-    ]
-    trains = [
-        ('Q1', 'B', 6),
-        ('Q2', 'C', 5)
-    ]
-    route_package_train(stations, routes, deliveries, trains)
-
-
-def test_hitchhike():
-    stations = ['A', 'B', 'C', 'D']
-    routes = [
-        ('E1', 'A', 'B', 5),
-        ('E2', 'A', 'C', 1),
-        ('E3', 'A', 'D', 2)
-    ]
-    deliveries = [
-        ('P1', 'D', 'B', 1),
-        ('P2', 'D', 'C', 2),
-        ('P3', 'B', 'C', 6)
-    ]
-    trains = [
-        ('Q1', 'D', 3),
-        ('Q2', 'C', 6)
-    ]
-    route_package_train(stations, routes, deliveries, trains)
-
-
 def test_invalid_input_dictionary():
     stations = []
     routes = {}
@@ -232,9 +179,84 @@ def test_invalid_pickup_weight():
         route_package_train(stations, routes, deliveries, trains)
 
 
+def test_ground_scenario():
+    stations = ['A', 'B', 'C']
+    routes = [
+        ('E1', 'A', 'B', 3),
+        ('E2', 'B', 'C', 1)
+    ]
+    deliveries = [
+        ('P1', 'A', 'C', 5),
+        ('P2', 'B', 'C', 3)
+    ]
+    trains = [
+        ('Q1', 'B', 6),
+        ('Q2', 'C', 5)
+    ]
+    route_package_train(stations, routes, deliveries, trains)
+
+
+def test_inventory():
+    stations = ['A', 'B', 'C']
+    routes = [
+        ('E1', 'A', 'B', 3),
+        ('E2', 'B', 'C', 1)
+    ]
+    deliveries = [
+        ('P1', 'A', 'C', 5),
+        ('P2', 'A', 'B', 3)
+    ]
+    trains = [
+        ('Q1', 'B', 6),
+        ('Q2', 'C', 5)
+    ]
+    route_package_train(stations, routes, deliveries, trains)
+
+
+def test_hitchhike():
+    stations = ['A', 'B', 'C', 'D']
+    routes = [
+        ('E1', 'A', 'B', 5),
+        ('E2', 'A', 'C', 1),
+        ('E3', 'A', 'D', 2)
+    ]
+    deliveries = [
+        ('P1', 'D', 'B', 1),
+        ('P2', 'D', 'C', 2),
+        ('P3', 'B', 'C', 6)
+    ]
+    trains = [
+        ('Q1', 'D', 3),
+        ('Q2', 'C', 6)
+    ]
+    route_package_train(stations, routes, deliveries, trains)
+
+
+def test_disconnected_graph():
+    stations = ['A', 'B', 'C', 'E', 'F', 'G']
+    routes = [
+        ('E1', 'A', 'B', 5),
+        ('E2', 'A', 'C', 2),
+        ('E3', 'E', 'F', 8),
+        ('E4', 'G', 'F', 3)
+    ]
+    deliveries = [
+        ('P1', 'B', 'C', 1),
+        ('P2', 'A', 'C', 4),
+        ('P3', 'G', 'E', 3),
+        ('P4', 'F', 'G', 8)
+    ]
+    trains = [
+        ('Q1', 'B', 6),
+        ('Q2', 'C', 4),
+        ('Q3', 'G', 11),
+        ('Q4', 'F', 8),
+    ]
+    route_package_train(stations, routes, deliveries, trains)
+
+
 if __name__ == '__main__':
-    # test_simplest_scenario()
+    # test_ground_scenario()
     # test_inventory()
-    # test_invalid_pickup_path()
-    # test_invalid_pickup_weight()
-    test_hitchhike()
+    # test_hitchhike()
+    test_disconnected_graph()
