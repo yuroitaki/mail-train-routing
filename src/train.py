@@ -14,6 +14,12 @@ class Train:
     def locate(self):
         return self._station
 
+    def max_capacity(self):
+        return self._max_capacity
+
+    def packages_to_drop(self):
+        return self._packages.get(self._station, None)
+
     def move(self, next_station, journey_duration):
         self._station = next_station
         self._elapsed_time += journey_duration
