@@ -21,7 +21,7 @@ class Train:
     def load_package(self, package, destination):
         if self._capacity < package.weight():
             return False
-        self._packages[destination] = { package.name(): None }
+        self._packages[destination] = {package.name(): None}
         self._capacity -= package.weight()
         return True
 
