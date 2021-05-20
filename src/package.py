@@ -7,11 +7,12 @@ STATUS = {
 
 class Package:
 
-    def __init__(self, name, origin, destination, weight):
+    def __init__(self, name, origin, destination, weight, index):
         self._name = name
         self._origin = origin
         self._destination = destination
         self._weight = weight
+        self._index = index
 
         if origin == destination:
             self._status = STATUS['delivered']
@@ -30,6 +31,9 @@ class Package:
     def weight(self):
         return self._weight
 
+    def index(self):
+        return self._index
+
     def status(self):
         return self._status
 
@@ -39,5 +43,6 @@ class Package:
     def drop(self, station):
         if station != self._destination:
             self._origin = station
+            self._status = STATUS['pending']
         else:
             self._status = STATUS['delivered']

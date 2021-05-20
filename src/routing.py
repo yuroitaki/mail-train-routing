@@ -1,5 +1,6 @@
 import math
 import networkx as nx
+from copy import deepcopy
 
 from src.package import Package, STATUS
 from src.train import Train
@@ -119,14 +120,21 @@ def construct_packages(deliveries, station_map):
                 name,
                 station_map[origin],
                 station_map[destination],
-                weight
+                weight,
+                index
             )
         )
         inventory = station_inventory.get(station_map[origin], None)
         if inventory is None:
-            station_inventory[station_map[origin]] = {name: index}
+            station_inventory[station_map[origin]] = {name: {
+                'drop_time': 0,
+                'index': index
+            }}
         else:
-            station_inventory[station_map[origin]][name] = index
+            station_inventory[station_map[origin]][name] = {
+                'drop_time': 0,
+                'index': index
+            }
 
     return package_collections, station_inventory
 
@@ -161,7 +169,7 @@ def set_shortest_path_info(
     shortest_paths
 ):
     shortest_paths[left_node][right_node] = time_cost, path
-    shortest_paths[right_node][left_node] = time_cost, path
+    shortest_paths[right_node][left_node] = time_cost, path[::-1]
 
 
 def compute_shortest_path(
@@ -259,39 +267,104 @@ def combine_paths(left_path, right_path):
     return combined_path
 
 
+def retrieve_station_inventory(station, station_inventory):
+    inventory = station_inventory.get(station, None)
+    if inventory is None:
+        return False
+    return inventory
+
+
 def pop_station_inventory(package, station_inventory):
     inventory = station_inventory.get(package.origin(), None)
     if inventory is None:
         raise ValueError('MISSING_INVENTORY_AT_ORIGIN')
     if package.name() not in inventory:
         raise ValueError('MISSING_PACKAGE_AT_ORIGIN_INVENTORY')
+
     station_inventory[package.origin()].pop(package.name())
 
 
-def load_package(package, train, destination, station_inventory):
-    loading_result = train.load_package(package, destination)
-    if not loading_result:
+def load_package(
+    package,
+    train,
+    station,
+    station_inventory,
+    package_collections,
+    shortest_paths,
+    future_path
+):
+    inventory = retrieve_station_inventory(station, station_inventory)
+    if not inventory or len(inventory) == 0:
         return False
-    package.load()
-    pop_station_inventory(package, station_inventory)
 
-    return True
+    packages_to_load = list()
+    destinations = list()
+    for package_name in inventory:
+        package_index = inventory[package_name]['index']
+        inventory_package = package_collections[package_index]
+
+        if inventory_package.status() == STATUS['delivered']:
+            continue
+
+        if package_index == package.index():
+            packages_to_load.append(package)
+            destinations.append(package.destination())
+            continue
+
+        drop_time = inventory[package_name]['drop_time']
+        if drop_time > train.elapsed_time():
+            continue
+
+        if not train.check_package(inventory_package, package.weight()):
+            continue
+
+        _, delivery_path = get_shortest_path_info(
+            inventory_package.origin(),
+            inventory_package.destination(),
+            shortest_paths
+        )
+        for index in range(len(delivery_path) - 1, 0, -1):
+            if delivery_path[index] in future_path:
+                packages_to_load.append(inventory_package)
+                destinations.append(delivery_path[index])
+                break
+
+    if len(packages_to_load) == 0:
+        return False
+
+    for package_to_load, destination in zip(packages_to_load, destinations):
+        pop_station_inventory(package_to_load, station_inventory)
+        train.load_package(package_to_load, destination)
+        package_to_load.load()
+
+    return [package.name() for package in packages_to_load]
 
 
-def push_station_inventory(package, package_index, station, station_inventory):
+def push_station_inventory(
+    package,
+    package_index,
+    station,
+    drop_time,
+    station_inventory
+):
     packages = station_inventory.get(station, None)
     if packages is None:
-        station_inventory[station] = {package.name(): package_index}
+        station_inventory[station] = {
+            package.name(): {'drop_time': drop_time, 'index': package_index}
+        }
     else:
-        station_inventory[station][package.name()] = package_index
+        station_inventory[station][package.name()] = {
+            'drop_time': drop_time,
+            'index': package_index
+        }
 
 
 def drop_package(train, station, station_inventory, package_collections):
-    packages_to_drop = train.packages_to_drop()
+    packages_to_drop = deepcopy(train.packages_to_drop())
     if packages_to_drop is None or len(packages_to_drop) == 0:
         return False
     for package_name in packages_to_drop:
-        package_index = packages_to_drop[package_name]
+        package_index = packages_to_drop[package_name]['index']
         package = package_collections[package_index]
 
         train.drop_package(package)
@@ -300,9 +373,22 @@ def drop_package(train, station, station_inventory, package_collections):
             package,
             package_index,
             station,
+            train.elapsed_time(),
             station_inventory
         )
     return list(packages_to_drop.keys())
+
+
+def get_route_time_cost(left_node, right_node, train_network):
+    return train_network[left_node][right_node]['weight']
+
+
+def get_route_name(left_node, right_node, train_network):
+    return train_network[left_node][right_node]['name']
+
+
+def get_station_name(station, train_network):
+    return train_network.nodes[station]['name']
 
 
 def route_package_train(stations, routes, deliveries, trains):
@@ -310,11 +396,6 @@ def route_package_train(stations, routes, deliveries, trains):
 
     train_network, station_map = construct_train_network(stations, routes)
     no_of_station = len(station_map)
-
-    # print('train network', train_network[0])
-    # print('train_node', train_network.nodes[0]['name'])
-    # print('train_edge', train_network[0][1]['name'])
-    # print('station_map', station_map)
 
     train_collections = construct_trains(trains, station_map)
     package_collections, station_inventory = construct_packages(
@@ -338,8 +419,6 @@ def route_package_train(stations, routes, deliveries, trains):
             shortest_paths,
             train_network
         )
-        load_package(package, train, package.destination(), station_inventory)
-
         _, delivery_path = get_shortest_path_info(
             package.origin(),
             package.destination(),
@@ -347,21 +426,66 @@ def route_package_train(stations, routes, deliveries, trains):
         )
         journey_path = combine_paths(pickup_path, delivery_path)
         journey_length = len(journey_path)
-        for position in range(journey_length):
+
+        for index in range(journey_length):
             loaded_packages = list()
             dropped_packages = list()
 
             dropped_inventory = drop_package(
                 train,
-                journey_path[position],
+                journey_path[index],
                 station_inventory,
                 package_collections
             )
-
             if dropped_inventory:
                 dropped_packages.extend(dropped_inventory)
 
-            # if position < journey_path - 2:
-            #     train.move(
-            #         journey_path[position + 1],
-            #     )
+            loaded_inventory = load_package(
+                package,
+                train,
+                journey_path[index],
+                station_inventory,
+                package_collections,
+                shortest_paths,
+                journey_path[index+1:]
+            )
+            if loaded_inventory:
+                loaded_packages.extend(loaded_inventory)
+
+            if index <= journey_length - 2:
+                next_route_duration = get_route_time_cost(
+                    journey_path[index],
+                    journey_path[index + 1],
+                    train_network
+                )
+                train.record_log(
+                    get_station_name(journey_path[index], train_network),
+                    get_station_name(journey_path[index + 1], train_network),
+                    get_route_name(
+                        journey_path[index],
+                        journey_path[index + 1],
+                        train_network
+                    ),
+                    next_route_duration,
+                    loaded_packages,
+                    dropped_packages
+                )
+                train.move(journey_path[index + 1], next_route_duration)
+            else:
+                train.record_log(
+                    get_station_name(journey_path[index], train_network),
+                    None,
+                    None,
+                    None,
+                    loaded_packages,
+                    dropped_packages
+                )
+
+    logs = list()
+    for train in train_collections:
+        logs.extend(train.retrieve_log())
+
+    logs.sort(key = lambda x: x['time'])
+    print('Chronological train schedule')
+    for log in logs:
+        print(log)

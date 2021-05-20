@@ -27,12 +27,17 @@ class Train:
         self._station = next_station
         self._elapsed_time += journey_duration
 
-    def load_package(self, package, destination):
-        if self._capacity < package.weight():
+    def check_package(self, package, future_weight):
+        if self._capacity < (package.weight() + future_weight):
             return False
-        self._packages[destination] = {package.name(): None}
-        self._capacity -= package.weight()
         return True
+
+    def load_package(self, package, destination):
+        if self._packages.get(destination, None) is None:
+            self._packages[destination] = {package.name(): {'index': package.index()}}
+        else:
+            self._packages[destination][package.name()] = {'index': package.index()}
+        self._capacity -= package.weight()
 
     def drop_package(self, package):
         packages_to_drop = self._packages.get(self._station, None)

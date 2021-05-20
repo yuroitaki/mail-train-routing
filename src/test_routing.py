@@ -214,7 +214,7 @@ def test_invalid_pickup_weight():
 
 
 if __name__ == '__main__':
-    # test_simplest_scenario()
-    test_inventory()
+    test_simplest_scenario()
+    # test_inventory()
     # test_invalid_pickup_path()
     # test_invalid_pickup_weight()
