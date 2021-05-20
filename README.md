@@ -1,10 +1,10 @@
 ## Scope
 
-A Python implementation of capacitated vehicle routing problem.
+A Python implementation to solve a variant of capacitated vehicle routing problem.
 
 ## Implementation
 - Handled mutliple concurrent deliveries of packages using multiple trains
-- Achieved more optimal schedule by allowing train to deliver package to an intermediate nearer station to the destination
+- Achieved more optimal schedule by intermdiate deposit - allowing train to deliver package to an intermediate nearer station to the destination
 - Achieved concurrency by always assigning packages to train that is nearest and has done the least deliveries
 - Saved computation by storing shortest distance calculated
 

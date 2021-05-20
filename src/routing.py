@@ -125,6 +125,8 @@ def construct_packages(deliveries, station_map):
             )
         )
         inventory = station_inventory.get(station_map[origin], None)
+        # station_inventory keeps track of what package is currently present
+        # in each station and the time they are deposited there
         if inventory is None:
             station_inventory[station_map[origin]] = {name: {
                 'drop_time': 0,
@@ -185,6 +187,7 @@ def compute_shortest_path(
     )
     if time_cost is None or path is None:
         try:
+            # dijkstra is used as a train network is more likely a sparse graph
             time_cost = nx.dijkstra_path_length(
                 train_network,
                 left_node,
@@ -246,13 +249,17 @@ def find_best_delivery_train(
                 shortest_paths,
                 train_network
             )
+        # when there is no path from train to package
         except ValueError as _e:
             continue
 
+        # when package is intermediately deposited at a later time by another train
+        # the current train will reach the package before it is deposited
         drop_time = station_inventory[package.origin()][package.name()]['drop_time']
         if pickup_time_cost < drop_time:
             continue
 
+        # pick the nearest train that has done least deliveries (lowest time elapsed)
         pickup_cost = pickup_time_cost + train.elapsed_time()
         if pickup_cost < delivery_train_pickup_cost:
             delivery_train = train
@@ -302,6 +309,7 @@ def load_package(
     if not inventory or len(inventory) == 0:
         return False
 
+    # check what package the train can load
     packages_to_load = list()
     destinations = list()
     for package_name in inventory:
@@ -311,18 +319,25 @@ def load_package(
         if inventory_package.status() == STATUS['delivered']:
             continue
 
+        # when package is intermediately deposited at a later time by another train
+        # technically the package isn't present in this station yet
         drop_time = inventory[package_name]['drop_time']
         if drop_time > train.elapsed_time():
             continue
 
+        # package is the target package assigned to the train
         if package_index == package.index():
             packages_to_load.append(package)
             destinations.append(package.destination())
             continue
 
+        # package weight will exceed train capacity after accounting for the assigned
+        # package weight
         if not train.check_package(inventory_package, package.weight()):
             continue
 
+        # check if the train can deliver this package to a nearer intermediate station
+        # to its destination
         _, delivery_path = get_shortest_path_info(
             inventory_package.origin(),
             inventory_package.destination(),
@@ -365,6 +380,7 @@ def push_station_inventory(
 
 
 def drop_package(train, station, station_inventory, package_collections):
+    # get the packages to be dropped from the train
     packages_to_drop = deepcopy(train.packages_to_drop())
     if packages_to_drop is None or len(packages_to_drop) == 0:
         return False
@@ -408,6 +424,8 @@ def route_package_train(stations, routes, deliveries, trains):
         station_map
     )
     shortest_paths = [[None for _i in range(no_of_station)] for _j in range(no_of_station)]
+
+    # calculate the shortest path for package deliveries
     compute_delivery_shortest_paths(
         package_collections,
         shortest_paths,
@@ -458,6 +476,7 @@ def route_package_train(stations, routes, deliveries, trains):
             if loaded_inventory:
                 loaded_packages.extend(loaded_inventory)
 
+            # move train to next station
             if index <= journey_length - 2:
                 next_route_duration = get_route_time_cost(
                     journey_path[index],
@@ -477,6 +496,7 @@ def route_package_train(stations, routes, deliveries, trains):
                     dropped_packages
                 )
                 train.move(journey_path[index + 1], next_route_duration)
+            # when the train reaches its destination
             else:
                 train.record_log(
                     get_station_name(journey_path[index], train_network),

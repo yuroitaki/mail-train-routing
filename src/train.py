@@ -27,6 +27,8 @@ class Train:
         self._station = next_station
         self._elapsed_time += journey_duration
 
+    # future_weight = the weight of package that is assigned to be delivered
+    # package = other package discovered at a station
     def check_package(self, package, future_weight):
         if self._capacity < (package.weight() + future_weight):
             return False
