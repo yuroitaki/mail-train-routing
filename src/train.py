@@ -17,6 +17,9 @@ class Train:
     def max_capacity(self):
         return self._max_capacity
 
+    def elapsed_time(self):
+        return self._elapsed_time
+
     def packages_to_drop(self):
         return self._packages.get(self._station, None)
 

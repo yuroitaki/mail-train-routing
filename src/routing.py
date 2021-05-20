@@ -1,6 +1,7 @@
+import math
 import networkx as nx
 
-from src.package import Package
+from src.package import Package, STATUS
 from src.train import Train
 
 
@@ -25,8 +26,17 @@ def validate_input(stations, routes, deliveries, trains):
 
     try:
         stations = [str(station) for station in stations]
+        if len(set(stations)) != len(stations):
+            raise ValueError('DUPLICATED_STATION_NAME')
+
+        route_names = list()
         for i in range(len(routes)):
             route_name, left_station, right_station, time_cost = routes[i]
+
+            if route_name in route_names:
+                raise ValueError('DUPLICATED_ROUTE_NAME')
+            route_names.append(route_name)
+
             if int(time_cost) <= 0:
                 raise ValueError('ROUTE_TIME_COST_MUST_BE_BIGGER_THAN_ZERO')
             if str(left_station) not in stations or str(right_station) not in stations:
@@ -37,8 +47,15 @@ def validate_input(stations, routes, deliveries, trains):
                 str(right_station),
                 int(time_cost)
             )
+
+        package_names = list()
         for i in range(len(deliveries)):
             package_name, origin, destination, package_weight = deliveries[i]
+
+            if package_name in package_names:
+                raise ValueError('DUPLICATED_PACKAGE_NAME')
+            package_names.append(package_name)
+
             if int(package_weight) <= 0:
                 raise ValueError('PACKAGE_WEIGHT_MUST_BE_BIGGER_THAN_ZERO')
             if str(origin) not in stations or str(destination) not in stations:
@@ -49,8 +66,15 @@ def validate_input(stations, routes, deliveries, trains):
                 str(destination),
                 int(package_weight)
             )
+
+        train_names = list()
         for i in range(len(trains)):
             train_name, train_station, train_max_capacity = trains[i]
+
+            if train_name in train_names:
+                raise ValueError('DUPLICATE_TRAIN_NAME')
+            train_names.append(train_name)
+
             if int(train_max_capacity) <= 0:
                 raise ValueError('TRAIN_MAX_CAPACITY_MUST_BE_BIGGER_THAN_ZERO')
             if str(train_station) not in stations:
@@ -182,6 +206,49 @@ def compute_delivery_shortest_paths(
         )
 
 
+def find_best_delivery_train(
+    package,
+    train_collections,
+    shortest_paths,
+    train_network
+):
+    delivery_train = None
+    delivery_train_pickup_path = None
+    delivery_train_pickup_cost = math.inf
+
+    for train in train_collections:
+        if train.max_capacity() < package.weight():
+            continue
+
+        try:
+            pickup_time_cost, pickup_path = compute_shortest_path(
+                train.locate(),
+                package.origin(),
+                shortest_paths,
+                train_network
+            )
+        except ValueError as _e:
+            continue
+
+        pickup_cost = pickup_time_cost + train.elapsed_time()
+        if pickup_cost < delivery_train_pickup_cost:
+            delivery_train = train
+            delivery_train_pickup_path = pickup_path
+            delivery_train_pickup_cost = pickup_cost
+
+    if delivery_train is None:
+        raise ValueError('PACKAGE_CANNOT_BE_DELIVERED_BY_ANY_TRAIN')
+
+    return delivery_train, delivery_train_pickup_cost, delivery_train_pickup_path
+
+
+def combine_paths(left_path, right_path):
+    combined_path = list()
+    combined_path.extend(left_path)
+    combined_path.extend(right_path[1:])
+    return combined_path
+
+
 def route_package_train(stations, routes, deliveries, trains):
     validate_input(stations, routes, deliveries, trains)
 
@@ -198,10 +265,26 @@ def route_package_train(stations, routes, deliveries, trains):
         deliveries,
         station_map
     )
-    shortest_paths = [[None for i in range(no_of_station)] for j in range(no_of_station)]
+    shortest_paths = [[None for _i in range(no_of_station)] for _j in range(no_of_station)]
     compute_delivery_shortest_paths(
         package_collections,
         shortest_paths,
         train_network
     )
-    pass
+
+    for package in package_collections:
+        if package.status() == STATUS['delivered']:
+            continue
+
+        train, pickup_cost, pickup_path = find_best_delivery_train(
+            package,
+            train_collections,
+            shortest_paths,
+            train_network
+        )
+        _, delivery_path = get_shortest_path_info(
+            package.origin(),
+            package.destination(),
+            shortest_paths
+        )
+        journey_path = combine_paths(pickup_path, delivery_path)
