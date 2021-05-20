@@ -36,6 +36,25 @@ def test_inventory():
     route_package_train(stations, routes, deliveries, trains)
 
 
+def test_hitchhike():
+    stations = ['A', 'B', 'C', 'D']
+    routes = [
+        ('E1', 'A', 'B', 5),
+        ('E2', 'A', 'C', 1),
+        ('E3', 'A', 'D', 2)
+    ]
+    deliveries = [
+        ('P1', 'D', 'B', 1),
+        ('P2', 'D', 'C', 2),
+        ('P3', 'B', 'C', 6)
+    ]
+    trains = [
+        ('Q1', 'D', 3),
+        ('Q2', 'C', 6)
+    ]
+    route_package_train(stations, routes, deliveries, trains)
+
+
 def test_invalid_input_dictionary():
     stations = []
     routes = {}
@@ -214,7 +233,8 @@ def test_invalid_pickup_weight():
 
 
 if __name__ == '__main__':
-    test_simplest_scenario()
+    # test_simplest_scenario()
     # test_inventory()
     # test_invalid_pickup_path()
     # test_invalid_pickup_weight()
+    test_hitchhike()

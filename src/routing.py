@@ -228,7 +228,8 @@ def find_best_delivery_train(
     package,
     train_collections,
     shortest_paths,
-    train_network
+    train_network,
+    station_inventory
 ):
     delivery_train = None
     delivery_train_pickup_path = None
@@ -246,6 +247,10 @@ def find_best_delivery_train(
                 train_network
             )
         except ValueError as _e:
+            continue
+
+        drop_time = station_inventory[package.origin()][package.name()]['drop_time']
+        if pickup_time_cost < drop_time:
             continue
 
         pickup_cost = pickup_time_cost + train.elapsed_time()
@@ -306,13 +311,13 @@ def load_package(
         if inventory_package.status() == STATUS['delivered']:
             continue
 
+        drop_time = inventory[package_name]['drop_time']
+        if drop_time > train.elapsed_time():
+            continue
+
         if package_index == package.index():
             packages_to_load.append(package)
             destinations.append(package.destination())
-            continue
-
-        drop_time = inventory[package_name]['drop_time']
-        if drop_time > train.elapsed_time():
             continue
 
         if not train.check_package(inventory_package, package.weight()):
@@ -417,7 +422,8 @@ def route_package_train(stations, routes, deliveries, trains):
             package,
             train_collections,
             shortest_paths,
-            train_network
+            train_network,
+            station_inventory
         )
         _, delivery_path = get_shortest_path_info(
             package.origin(),
@@ -485,7 +491,7 @@ def route_package_train(stations, routes, deliveries, trains):
     for train in train_collections:
         logs.extend(train.retrieve_log())
 
-    logs.sort(key = lambda x: x['time'])
+    logs.sort(key=lambda x: x['time'])
     print('Chronological train schedule')
     for log in logs:
         print(log)
