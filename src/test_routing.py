@@ -243,7 +243,7 @@ def test_disconnected_graph():
     deliveries = [
         ('P1', 'B', 'C', 1),
         ('P2', 'A', 'C', 4),
-        ('P3', 'G', 'E', 3),
+        ('P3', 'G', 'G', 3),
         ('P4', 'F', 'G', 8)
     ]
     trains = [
@@ -255,8 +255,49 @@ def test_disconnected_graph():
     route_package_train(stations, routes, deliveries, trains)
 
 
+def test_10_node_graph():
+    stations = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'L', 'M']
+    routes = [
+        ('E1', 'A', 'B', 1),
+        ('E2', 'A', 'C', 1),
+        ('E3', 'A', 'G', 2),
+        ('E4', 'B', 'C', 1),
+        ('E5', 'B', 'D', 2),
+        ('E6', 'C', 'E', 3),
+        ('E7', 'C', 'D', 2),
+        ('E8', 'D', 'E', 4),
+        ('E9', 'E', 'F', 2),
+        ('E10', 'F', 'H', 100),
+        ('E11', 'F', 'J', 4),
+        ('E12', 'H', 'L', 5),
+        ('E13', 'L', 'M', 2),
+    ]
+    deliveries = [
+        ('P1', 'A', 'C', 1),
+        ('P2', 'G', 'D', 3),
+        ('P3', 'G', 'E', 10),
+        ('P4', 'A', 'L', 20),
+        ('P5', 'C', 'G', 6),
+        ('P6', 'C', 'B', 1),
+        ('P7', 'F', 'B', 1),
+        ('P8', 'L', 'M', 1),
+        ('P9', 'H', 'M', 2),
+        ('P10', 'C', 'J', 4)
+    ]
+    trains = [
+        ('Q1', 'G', 3),
+        ('Q2', 'D', 100),
+        ('Q3', 'C', 5),
+        ('Q4', 'J', 7),
+        ('Q5', 'J', 3),
+        ('Q6', 'J', 5),
+    ]
+    route_package_train(stations, routes, deliveries, trains)
+
+
 if __name__ == '__main__':
     # test_ground_scenario()
     # test_inventory()
     # test_hitchhike()
-    test_disconnected_graph()
+    # test_disconnected_graph()
+    test_10_node_graph()

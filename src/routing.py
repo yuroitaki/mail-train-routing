@@ -256,7 +256,7 @@ def find_best_delivery_train(
         # when package is intermediately deposited at a later time by another train
         # the current train will reach the package before it is deposited
         drop_time = station_inventory[package.origin()][package.name()]['drop_time']
-        if pickup_time_cost < drop_time:
+        if (train.elapsed_time() + pickup_time_cost) < drop_time:
             continue
 
         # pick the nearest train that has done least deliveries (lowest time elapsed)
@@ -303,7 +303,8 @@ def load_package(
     station_inventory,
     package_collections,
     shortest_paths,
-    future_path
+    future_path,
+    train_network
 ):
     inventory = retrieve_station_inventory(station, station_inventory)
     if not inventory or len(inventory) == 0:
@@ -338,10 +339,11 @@ def load_package(
 
         # check if the train can deliver this package to a nearer intermediate station
         # to its destination
-        _, delivery_path = get_shortest_path_info(
+        _, delivery_path = compute_shortest_path(
             inventory_package.origin(),
             inventory_package.destination(),
-            shortest_paths
+            shortest_paths,
+            train_network
         )
         for index in range(len(delivery_path) - 1, 0, -1):
             if delivery_path[index] in future_path:
@@ -471,7 +473,8 @@ def route_package_train(stations, routes, deliveries, trains):
                 station_inventory,
                 package_collections,
                 shortest_paths,
-                journey_path[index+1:]
+                journey_path[index+1:],
+                train_network
             )
             if loaded_inventory:
                 loaded_packages.extend(loaded_inventory)
